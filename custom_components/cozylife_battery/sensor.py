@@ -37,6 +37,15 @@ async def async_setup_entry(
             CozyLifeSensor(
                 coordinator,
                 entry,
+                "21",
+                "Incoming Watts",
+                SensorDeviceClass.POWER,
+                UnitOfPower.WATT,
+                SensorStateClass.MEASUREMENT,
+            ),
+            CozyLifeSensor(
+                coordinator,
+                entry,
                 "30",
                 "Minutes Remaining",
                 SensorDeviceClass.DURATION,
