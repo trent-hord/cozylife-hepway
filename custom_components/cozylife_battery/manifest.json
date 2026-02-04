@@ -1,0 +1,10 @@
+{
+  "domain": "cozylife_battery",
+  "name": "CozyLife Battery",
+  "codeowners": [],
+  "config_flow": true,
+  "documentation": "https://github.com/unknown/cozylife_battery",
+  "iot_class": "local_polling",
+  "version": "1.0.0",
+  "requirements": []
+}
