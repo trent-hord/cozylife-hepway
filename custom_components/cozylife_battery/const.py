@@ -3,3 +3,4 @@
 DOMAIN = "cozylife_battery"
 CONF_HOST = "host"
 DEFAULT_NAME = "CozyLife Battery"
+PORT = 5555
