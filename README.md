@@ -5,7 +5,9 @@ This is a custom integration for Home Assistant to control and monitor CozyLife 
 ## Features
 
 - **AC Power Switch**: Turn the AC output on and off.
+- **Battery Level Sensor**: Monitor the battery charge percentage.
 - **Output Watts Sensor**: Monitor the current power output.
+- **Incoming Watts Sensor**: Monitor incoming power (charging).
 - **Minutes Remaining Sensor**: Estimate the remaining battery life.
 
 ## Installation
@@ -39,7 +41,9 @@ This is a custom integration for Home Assistant to control and monitor CozyLife 
 Once configured, the following entities will be available:
 
 - `switch.cozylife_battery_ac_power`: Controls the AC power outlet.
+- `sensor.cozylife_battery_battery_level`: Shows the battery charge percentage.
 - `sensor.cozylife_battery_output_watts`: Shows the current output in Watts.
+- `sensor.cozylife_battery_incoming_watts`: Shows the incoming power in Watts (charging).
 - `sensor.cozylife_battery_minutes_remaining`: Shows the estimated runtime in minutes.
 
 ## Troubleshooting

@@ -9,6 +9,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from homeassistant.helpers.entity import DeviceInfo
+
 from .const import DOMAIN
 
 async def async_setup_entry(
@@ -51,6 +53,13 @@ class CozyLifeSwitch(CoordinatorEntity, SwitchEntity):
         self._attribute_id = attribute_id
         self._attr_name = name
         self._attr_unique_id = f"{entry.entry_id}_{attribute_id}"
+        self._attr_has_entity_name = True
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
+            manufacturer="CozyLife / Hepway",
+            model="Portable Battery",
+        )
 
     @property
     def is_on(self) -> bool | None:

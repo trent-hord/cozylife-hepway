@@ -7,10 +7,12 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfPower, UnitOfTime
+from homeassistant.const import PERCENTAGE, UnitOfPower, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN
 
@@ -25,6 +27,15 @@ async def async_setup_entry(
 
     async_add_entities(
         [
+            CozyLifeSensor(
+                coordinator,
+                entry,
+                "2",
+                "Battery Level",
+                SensorDeviceClass.BATTERY,
+                PERCENTAGE,
+                SensorStateClass.MEASUREMENT,
+            ),
             CozyLifeSensor(
                 coordinator,
                 entry,
@@ -77,6 +88,13 @@ class CozyLifeSensor(CoordinatorEntity, SensorEntity):
         self._attr_device_class = device_class
         self._attr_native_unit_of_measurement = native_unit_of_measurement
         self._attr_state_class = state_class
+        self._attr_has_entity_name = True
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry.entry_id)},
+            name=entry.title,
+            manufacturer="CozyLife / Hepway",
+            model="Portable Battery",
+        )
 
     @property
     def native_value(self):
