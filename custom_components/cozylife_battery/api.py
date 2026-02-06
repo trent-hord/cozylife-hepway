@@ -20,7 +20,8 @@ class CozyLifeAPI:
         self.host = host
         self._state = {
             "1": 0,      # AC Power (0=off, 1=on)
-            "2": 0,      # Battery Level (percentage)
+            "2": 0,      # Battery Level (percentage) - Deprecated?
+            "3": 0,      # Battery Level (percentage / 10)
             "4": 0,      # Output Watts
             "21": 0,     # Incoming Watts
             "30": 60     # Minutes Remaining

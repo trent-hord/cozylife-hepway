@@ -30,7 +30,7 @@ async def async_setup_entry(
             CozyLifeSensor(
                 coordinator,
                 entry,
-                "2",
+                "3",
                 "Battery Level",
                 SensorDeviceClass.BATTERY,
                 PERCENTAGE,
@@ -99,4 +99,7 @@ class CozyLifeSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        return self.coordinator.data.get(self._attribute_id)
+        value = self.coordinator.data.get(self._attribute_id)
+        if self._attribute_id == "3" and value is not None:
+            return float(value) / 10
+        return value
