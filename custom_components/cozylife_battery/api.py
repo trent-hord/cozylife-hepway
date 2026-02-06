@@ -20,6 +20,7 @@ class CozyLifeAPI:
         self.host = host
         self._state = {
             "1": 0,      # AC Power (0=off, 1=on)
+            "2": 0,      # Battery Level (percentage)
             "4": 0,      # Output Watts
             "21": 0,     # Incoming Watts
             "30": 60     # Minutes Remaining
@@ -96,8 +97,8 @@ class CozyLifeAPI:
             payload = {attribute_id: int(value)}
             await self._send_tcp_command(3, payload)
 
-            # Optimistic update
-            self._state[attribute_id] = value
+            # Optimistic update (store as int to match what the device expects)
+            self._state[attribute_id] = int(value)
             return True
         except Exception as e:
              _LOGGER.error("Error setting state for %s: %s", attribute_id, e)
