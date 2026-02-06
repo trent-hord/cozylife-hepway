@@ -15,7 +15,7 @@ BUFFER_SIZE = 4096
 class CozyLifeAPI:
     """API to communicate with the CozyLife device."""
 
-    def __init__(self, host: str):
+    def __init__(self, host: str) -> None:
         """Initialize the API."""
         self.host = host
         self._state = {
@@ -60,8 +60,8 @@ class CozyLifeAPI:
             return json.loads(response_str)
 
         except (asyncio.TimeoutError, ConnectionError, socket.gaierror) as err:
-            _LOGGER.error("Connection error to %s: %s", self.host, err)
-            raise
+            _LOGGER.debug("Connection error to %s: %s", self.host, err)
+            raise ConnectionError(f"Failed to connect to {self.host}") from err
         except json.JSONDecodeError as err:
             _LOGGER.error("JSON decode error from %s: %s", self.host, err)
             raise
@@ -73,7 +73,7 @@ class CozyLifeAPI:
                 except Exception:
                     pass
 
-    async def update(self):
+    async def update(self) -> dict:
         """Fetch the latest data from the device."""
         try:
             # Query all attributes using [0] based on reference implementation
@@ -83,13 +83,16 @@ class CozyLifeAPI:
                 self._state.update(response['msg']['data'])
             elif 'error' in response:
                 _LOGGER.error("Device reported error: %s", response['error'])
+        except ConnectionError as e:
+             # Just re-raise connection errors to be handled by coordinator
+             raise e
         except Exception as e:
             _LOGGER.error("Error updating status: %s", e)
             raise
 
         return self._state
 
-    async def set_state(self, attribute_id: str, value):
+    async def set_state(self, attribute_id: str, value) -> bool:
         """Set a specific attribute on the device."""
         try:
             # attribute_id is expected to be a string key for the payload
@@ -102,3 +105,11 @@ class CozyLifeAPI:
         except Exception as e:
              _LOGGER.error("Error setting state for %s: %s", attribute_id, e)
              return False
+
+    async def test_connection(self) -> bool:
+        """Test the connection to the device."""
+        try:
+            await self._send_tcp_command(2, {'attr': [0]})
+            return True
+        except Exception:
+            return False
