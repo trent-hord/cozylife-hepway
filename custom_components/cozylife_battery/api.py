@@ -24,7 +24,8 @@ class CozyLifeAPI:
             "3": 0,      # Battery Level (percentage / 10)
             "4": 0,      # Output Watts
             "21": 0,     # Incoming Watts
-            "30": 60     # Minutes Remaining
+            "30": 60,    # Minutes Remaining
+            "47": 0      # AC Charging Power
         }
 
     async def _send_tcp_command(self, cmd: int, payload: dict) -> dict:
