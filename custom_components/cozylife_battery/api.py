@@ -56,7 +56,7 @@ class CozyLifeAPI:
             writer.write(packet)
             await writer.drain()
 
-            data = await asyncio.wait_for(reader.read(BUFFER_SIZE), timeout=TIMEOUT)
+            data = await asyncio.wait_for(reader.readline(), timeout=TIMEOUT)
             response_str = data.decode('utf-8').strip()
             _LOGGER.debug("Received from %s: %s", self.host, response_str)
 
