@@ -79,8 +79,9 @@ class CozyLifeAPI:
     async def update(self):
         """Fetch the latest data from the device."""
         try:
-            # Query all attributes using [0] based on reference implementation
-            response = await self._send_tcp_command(2, {'attr': [0]})
+            # Query specific attributes we track
+            attr_list = [int(k) for k in self._state.keys()]
+            response = await self._send_tcp_command(2, {'attr': attr_list})
             if 'msg' in response and 'data' in response['msg']:
                 # The data comes as a dictionary of attributes
                 self._state.update(response['msg']['data'])
