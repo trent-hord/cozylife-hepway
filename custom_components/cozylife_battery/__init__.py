@@ -1,6 +1,7 @@
 """The CozyLife Battery integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -19,6 +20,9 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
 
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds between retry attempts
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up CozyLife Battery from a config entry."""
 
@@ -26,11 +30,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api = CozyLifeAPI(host)
 
     async def async_update_data():
-        """Fetch data from API endpoint."""
-        try:
-            return await api.update()
-        except Exception as err:
-            raise UpdateFailed(f"Error communicating with API: {err}")
+        """Fetch data from API endpoint, retrying on failure."""
+        last_err = None
+        for attempt in range(1, MAX_RETRIES + 1):
+            try:
+                return await api.update()
+            except Exception as err:
+                last_err = err
+                if attempt < MAX_RETRIES:
+                    _LOGGER.warning(
+                        "Update attempt %d/%d failed for %s: %s — retrying in %ds",
+                        attempt,
+                        MAX_RETRIES,
+                        host,
+                        err,
+                        RETRY_DELAY,
+                    )
+                    await asyncio.sleep(RETRY_DELAY)
+        _LOGGER.error(
+            "All %d update attempts failed for %s: %s",
+            MAX_RETRIES,
+            host,
+            last_err,
+        )
+        raise UpdateFailed(f"Error communicating with API after {MAX_RETRIES} attempts: {last_err}")
 
     coordinator = DataUpdateCoordinator(
         hass,
