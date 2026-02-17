@@ -12,6 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 TIMEOUT = 10
 BUFFER_SIZE = 4096
 
+
 class CozyLifeAPI:
     """API to communicate with the CozyLife device."""
 
@@ -27,9 +28,40 @@ class CozyLifeAPI:
             "30": 60,    # Minutes Remaining
             "47": 0      # AC Charging Power
         }
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
+
+    async def _ensure_connection(self):
+        """Ensure we have an active TCP connection, reconnecting if needed."""
+        if self._writer is not None and not self._writer.is_closing():
+            return
+
+        # Clean up any stale connection
+        await self._close_connection()
+
+        _LOGGER.debug("Opening connection to %s:%s", self.host, PORT)
+        self._reader, self._writer = await asyncio.wait_for(
+            asyncio.open_connection(self.host, PORT), timeout=TIMEOUT
+        )
+
+    async def _close_connection(self):
+        """Close the TCP connection."""
+        if self._writer:
+            try:
+                self._writer.close()
+                await self._writer.wait_closed()
+            except Exception:
+                pass
+        self._reader = None
+        self._writer = None
 
     async def _send_tcp_command(self, cmd: int, payload: dict) -> dict:
-        """Send a command and return the response."""
+        """Send a command and return the response.
+
+        Uses a persistent connection. If the send fails on an existing
+        connection, tears it down, reconnects once, and retries before
+        propagating the error.
+        """
         sn = str(int(round(time.time() * 1000)))
         message = {
             'pv': 0,
@@ -45,36 +77,35 @@ class CozyLifeAPI:
         json_str = json.dumps(message)
         packet = (json_str + "\r\n").encode('utf-8')
 
-        reader = writer = None
-        try:
-            _LOGGER.debug("Connecting to %s:%s", self.host, PORT)
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, PORT), timeout=TIMEOUT
-            )
+        # Try twice: once on the existing connection, once after reconnecting
+        for attempt in range(2):
+            try:
+                await self._ensure_connection()
 
-            _LOGGER.debug("Sending to %s: %s", self.host, packet)
-            writer.write(packet)
-            await writer.drain()
+                _LOGGER.debug("Sending to %s: %s", self.host, packet)
+                self._writer.write(packet)
+                await self._writer.drain()
 
-            data = await asyncio.wait_for(reader.readline(), timeout=TIMEOUT)
-            response_str = data.decode('utf-8').strip()
-            _LOGGER.debug("Received from %s: %s", self.host, response_str)
+                data = await asyncio.wait_for(self._reader.readline(), timeout=TIMEOUT)
 
-            return json.loads(response_str)
+                if not data:
+                    raise ConnectionError("Device closed connection (empty response)")
 
-        except (asyncio.TimeoutError, ConnectionError, socket.gaierror) as err:
-            _LOGGER.error("Connection error to %s: %s", self.host, err)
-            raise
-        except json.JSONDecodeError as err:
-            _LOGGER.error("JSON decode error from %s: %s", self.host, err)
-            raise
-        finally:
-            if writer:
-                writer.close()
-                try:
-                    await writer.wait_closed()
-                except Exception:
-                    pass
+                response_str = data.decode('utf-8').strip()
+                _LOGGER.debug("Received from %s: %s", self.host, response_str)
+
+                return json.loads(response_str)
+
+            except (asyncio.TimeoutError, OSError, json.JSONDecodeError) as err:
+                await self._close_connection()
+                if attempt == 0:
+                    _LOGGER.debug(
+                        "Connection to %s failed (%s), reconnecting...",
+                        self.host, err,
+                    )
+                    continue
+                _LOGGER.error("Connection error to %s: %s", self.host, err)
+                raise
 
     async def update(self):
         """Fetch the latest data from the device."""
@@ -106,3 +137,7 @@ class CozyLifeAPI:
         except Exception as e:
              _LOGGER.error("Error setting state for %s: %s", attribute_id, e)
              return False
+
+    async def async_close(self):
+        """Close the persistent connection (called on integration unload)."""
+        await self._close_connection()
