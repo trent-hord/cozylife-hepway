@@ -21,7 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH, Platform.SELECT]
 
 MAX_RETRIES = 3
-RETRY_DELAY = 5  # seconds between retry attempts
+BASE_RETRY_DELAY = 2  # seconds; doubles each attempt (2s, 4s)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up CozyLife Battery from a config entry."""
@@ -38,15 +38,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except Exception as err:
                 last_err = err
                 if attempt < MAX_RETRIES:
+                    delay = BASE_RETRY_DELAY * (2 ** (attempt - 1))
                     _LOGGER.warning(
                         "Update attempt %d/%d failed for %s: %s — retrying in %ds",
                         attempt,
                         MAX_RETRIES,
                         host,
                         err,
-                        RETRY_DELAY,
+                        delay,
                     )
-                    await asyncio.sleep(RETRY_DELAY)
+                    await asyncio.sleep(delay)
         _LOGGER.error(
             "All %d update attempts failed for %s: %s",
             MAX_RETRIES,
@@ -78,6 +79,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        hass.data[DOMAIN].pop(entry.entry_id)
+        data = hass.data[DOMAIN].pop(entry.entry_id)
+        await data["api"].async_close()
 
     return unload_ok
